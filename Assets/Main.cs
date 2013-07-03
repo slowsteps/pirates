@@ -6,10 +6,18 @@ public class Main : MonoBehaviour {
 	public GameObject shipdummy;
 	GameObject pirate;
 	GameObject rightboot;
+	
+	//islands
 	public GameObject island;
+	public ArrayList islands;
+	float savedIslandDist = 9999;
+	GameObject closestIsland;
+	GameObject diggingspot;
+	bool newdig = true;
+	
 	GameObject rudder;
 	GameObject cross;
-	GameObject crossmodel;
+	
 	GameObject treasure;
 	GameObject chest;
 	GameObject boot;
@@ -34,7 +42,7 @@ public class Main : MonoBehaviour {
 	GameObject orbitdummy;
 	GameObject crowsnestdummy;
 	GameObject pirate_ship_pos;
-	GameObject islandviewpoint;
+	
 	GameObject cannonviewpoint;
 	GameObject cannonlookat;
 	GameObject cannon;
@@ -57,7 +65,7 @@ public class Main : MonoBehaviour {
 	public GameObject islandbutton;
 	
 	//
-	GameObject anchor;
+	private GameObject anchor;
 	GameObject nozzle;
 	public GameObject monster;
 	GameObject bell;
@@ -74,7 +82,7 @@ public class Main : MonoBehaviour {
 	GameObject cargohold;
 	GameObject spade;
 	GameObject islandhole;
-	GameObject islandflag;
+	public GameObject islandflag;
 	
 	Vector3 spadesavedpos;
 	GameObject linedummy;
@@ -123,13 +131,13 @@ public class Main : MonoBehaviour {
 		shipanimdummy = GameObject.Find("shipanimdummy");
 		crowsnestdummy = GameObject.Find("crowsnestdummy");
 		pirate_ship_pos = GameObject.Find ("pirate_shipposition_dummy");
-		islandviewpoint = GameObject.Find("islandviewpoint");
+
 		cannonviewpoint = GameObject.Find("cannonviewpoint");
 		defaultviewpoint = GameObject.Find("defaultviewpoint");
 		behindviewpoint = GameObject.Find ("behindviewpoint");
 		cannonlookat = GameObject.Find("cannonlookat");
 		cross = GameObject.Find("crossdummy");
-		crossmodel = GameObject.Find("crossmodel");
+		
 		nozzle = GameObject.Find("nozzle");
 		sails = GameObject.Find("sails");
 		saildummy = GameObject.Find("saildummy");
@@ -171,7 +179,7 @@ public class Main : MonoBehaviour {
 		rightboot = GameObject.Find("boot_r1");
 		spade = GameObject.Find("spade");
 		islandhole = GameObject.Find("islandhole");
-		islandflag = GameObject.Find("islandflag");
+	
 		
 		
 		
@@ -224,6 +232,7 @@ public class Main : MonoBehaviour {
 		
 		lowerSails();
 		toggleDefault("start");
+		setupIslands();
 		setupTreasures();
 		map.SetActive(false);
 		
@@ -237,6 +246,7 @@ public class Main : MonoBehaviour {
 		steerShip();
 		checkMouseClicks();
 		updateDigging();
+		findIslandInRange();
 		
 	}
 	
@@ -439,13 +449,14 @@ public class Main : MonoBehaviour {
 			if (Physics.Raycast(ray, out hitInfo)) {
 			
 			
-				message.text = hitInfo.collider.name;
+				message.text = hitInfo.collider.name + " " + hitInfo.collider.tag;
 				if (hitInfo.collider.name.Equals("anchor")) toggleAnchor();	
 				else if (hitInfo.collider.name.Equals("steerdummy")) toggleRudder();
 				else if (hitInfo.collider.name.Equals("crowsnest 1")) toggleCrowsnest();	
 				//else if (hitInfo.collider.name.Equals("deckdummy")) toggleDeck(hitInfo);
 				//else if (hitInfo.collider.name.Equals("islanddummy")) toggleIsland();
-				else if (hitInfo.collider.name.Equals("crossdummy")) digForTreasure();
+				//else if (hitInfo.collider.name.Equals("crossdummy")) digForTreasure();
+				else if (hitInfo.collider.tag.Equals("diggingspot")) digForTreasure();
 				//else if (hitInfo.collider.name.Equals("treasuredummy")) toggleTreasure();
 				//TODO tag
 				else if (hitInfo.collider.name.Equals("treasurechest")) toggleTreasure();
@@ -544,10 +555,16 @@ public class Main : MonoBehaviour {
 			gameMode = MODE_ISLAND;
 			cameraMode = CAM_ORBIT;
 			//curlookat = pirate;
-			curlookat = cross;
+			diggingspot = closestIsland.GetComponent<Island>().digginglocation;
+			diggingtime = 0;
+			newdig = true;
+			curlookat = diggingspot;
+			//curlookat = cross;
 			steering = false;
 			pirate.transform.parent = null;
-			pirate.transform.position = islandviewpoint.transform.position;
+			
+			pirate.transform.position = diggingspot.transform.position;
+			//pirate.transform.position = islandviewpoint.transform.position;
 			backbutton.SetActive(true);
 	}
 	
@@ -562,18 +579,17 @@ public class Main : MonoBehaviour {
 			
 			
 			if (diggingpower > 0 ) {
-				spade.transform.position = new Vector3(spade.transform.position.x, islandviewpoint.transform.position.y + 0.7f + 0.2f*Mathf.Sin(diggingpower*0.001f*Time.frameCount),spade.transform.position.z);
+				spade.transform.position = new Vector3(spade.transform.position.x, diggingspot.transform.position.y + 0.7f + 0.2f*Mathf.Sin(diggingpower*0.001f*Time.frameCount),spade.transform.position.z);
 				diggingpower--;
 				diggingtime++;
 				islandhole.transform.localScale = new Vector3(0.01f*diggingtime,0.01f*diggingtime,0.01f*diggingtime);
 				if (diggingtime == 200) {
 					revealTreasure();
-					cross.SetActive(false);
 					spade.SetActive(false);
 				}
 			}
 			else {
-			spade.transform.position = new Vector3(spade.transform.position.x, islandviewpoint.transform.position.y + 0.7f,spade.transform.position.z);
+			spade.transform.position = new Vector3(spade.transform.position.x, diggingspot.transform.position.y + 0.7f,spade.transform.position.z);
 			}
 
 		}
@@ -581,18 +597,29 @@ public class Main : MonoBehaviour {
 	
 	void digForTreasure() {
 		
-		crossmodel.SetActive(false);
-		steering = false;
-		diggingparticles.transform.position = cross.transform.position;
-		diggingparticles.SetActive(true);
-		islandhole.SetActive(true);
-		islandhole.transform.position = islandviewpoint.transform.position;
+		//print ("newdig: " + newdig.ToString() );
 		
-		diggingpower = 30;
-		
-		//curlookat = pirate;		
-		
-		
+		if (newdig) {
+			steering = false;
+			diggingparticles.transform.position = diggingspot.transform.position;
+			diggingparticles.SetActive(true);
+			islandhole.SetActive(true);
+			islandhole.transform.position = diggingspot.transform.position;
+			islandhole.transform.position = diggingspot.transform.position;
+			islandhole.transform.localScale = new Vector3(1,1,1);
+			diggingpower = 30;
+			newdig = false;
+		}
+		else {
+			diggingpower = 30;
+		}
+				
+	}
+	
+	void setupIslands() {
+		islands = new ArrayList();
+		islands.Add(island);
+		islands.Add(GameObject.Find("towerisland pf"));
 	}
 	
 	void setupTreasures() {
@@ -610,7 +637,7 @@ public class Main : MonoBehaviour {
 			g.SetActive(false);
 		}
 		
-		islandflag.SetActive(false);
+		
 		islandhole.SetActive(false);
 		
 
@@ -623,7 +650,7 @@ public class Main : MonoBehaviour {
 		
 		//treasure is the dummy container object
 		
-		island.GetComponent<Island>().treasureFound = true;
+		closestIsland.GetComponent<Island>().treasureFound = true;
 	
 		
 		curtreasure = treasures[Random.Range(0,treasures.Count)] as GameObject;
@@ -633,9 +660,12 @@ public class Main : MonoBehaviour {
 		curtreasure.transform.parent = treasure.transform;
 		
 		treasure.transform.position = pirate.transform.position + 2*pirate.transform.forward;
+		print ("tween treasure");
 		iTween.MoveFrom(treasure,iTween.Hash("y",10,"easetype",iTween.EaseType.easeOutBounce,"time",2));
 		
 		curtreasure.collider.enabled = true;
+		
+		
 		
 	}
 	
@@ -647,22 +677,26 @@ public class Main : MonoBehaviour {
 		//plant a flag to mark this island as explored
 		
 		if (curtreasure.GetComponent<Treasure>().isFromIsland) {
-			islandflag.SetActive(true);
-			islandflag.transform.position = islandviewpoint.transform.position - 2*pirate.transform.forward;
-			iTween.MoveFrom(islandflag,iTween.Hash("y",10,"time",0.4f,"delay",0));
+			print ("toggle treasure - is from island");
+			print ("islandflag: " + islandflag.name);
+			GameObject.Instantiate(islandflag ,pirate.transform.position - 2*pirate.transform.forward,Quaternion.identity);
+			//GameObject.Instantiate(islandflag);
+			print ("post instantiate");
+			//iTween.MoveFrom(anIslandflag,iTween.Hash("y",10,"time",0.4f,"delay",0));
 		}
 		
 		
 		if (curtreasure.GetComponent<Treasure>().isJunk) {
 			print ("Junk treasure");
-			//rightboot.transform.Rotate(-50,0,0,Space.Self);
-			iTween.RotateTo(rightboot,iTween.Hash("x",-50));
+			
+			//iTween.RotateTo(rightboot,iTween.Hash("x",-50));
 			curtreasure.transform.Translate(0,1,0);
 			curtreasure.AddComponent("Rigidbody");
 			curtreasure.collider.isTrigger = false;
 			curtreasure.rigidbody.AddForce(300*pirate.transform.forward);
 			curtreasure.rigidbody.AddForce(0,400,0);
 			curtreasure.rigidbody.AddTorque(20,0,10);
+			
 			curlookat = curtreasure;
 			
 		}
@@ -677,7 +711,7 @@ public class Main : MonoBehaviour {
 			
 			treasureToBeStored = true;
 			
-			//lowerSails();
+			
 			toggleDefault("treasure clicked");
 		}
 	}
@@ -820,6 +854,20 @@ public class Main : MonoBehaviour {
 			iTween.MoveTo(parrot,iTween.Hash("position",pirate.transform));
 			parrot.GetComponent<Parrot>().isflying = true;
 			parrot.GetComponent<Animator>().SetBool("isflying",false);			
+		}
+	}
+	
+	void findIslandInRange() {
+		
+		
+		foreach(GameObject anIsland in islands) {
+			print(anIsland.GetComponent<Island>().treasureFound);
+			float dist = Vector3.Distance(anIsland.transform.position,shipdummy.transform.position);
+			if (dist<savedIslandDist) {
+				closestIsland = anIsland;
+				savedIslandDist = dist;
+			}
+			
 		}
 	}
 	

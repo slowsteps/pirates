@@ -71,7 +71,7 @@ public class Monster : MonoBehaviour {
 		GameObject freshloot = Instantiate(tr, this.gameObject.transform.position,Quaternion.identity) as GameObject;
 		freshloot.transform.position = new Vector3(freshloot.transform.position.x,main.water.transform.position.y+4,freshloot.transform.position.z);
 		//freshloot.transform.Translate(0,2,0);
-		iTween.MoveFrom(freshloot,iTween.Hash("y",0,"time",5,"easetype",iTween.EaseType.easeOutElastic));
+		//iTween.MoveFrom(freshloot,iTween.Hash("y",0,"time",5,"easetype",iTween.EaseType.easeOutElastic));
 		freshloot.AddComponent("Treasure");
 		freshloot.GetComponent<Treasure>().isJunk = false;
 		freshloot.GetComponent<Treasure>().isFromIsland = false;

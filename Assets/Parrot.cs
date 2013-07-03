@@ -8,7 +8,7 @@ public class Parrot : MonoBehaviour {
 	
 	// Use this for initialization
 	void Start () {
-		gameObject.GetComponent<Animator>().SetBool(0,false);
+		//gameObject.GetComponent<Animator>().SetBool(0,false);
 	}
 	
 	// Update is called once per frame

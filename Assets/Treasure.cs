@@ -21,7 +21,7 @@ public class Treasure : MonoBehaviour {
 		water = GameObject.Find("water");
 		this.gameObject.AddComponent("SphereCollider");
 		SphereCollider sphereCollider = gameObject.GetComponent<SphereCollider>();
-		sphereCollider.radius = 2;
+		sphereCollider.radius = 1f;
 		this.gameObject.collider.isTrigger = true;
 		this.gameObject.collider.enabled = false;
 	}

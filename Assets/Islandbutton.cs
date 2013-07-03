@@ -18,7 +18,7 @@ public class Islandbutton : MonoBehaviour {
 	void OnMouseDown() {
 		this.gameObject.SetActive(false);
 		main.enterIsland();
-		print ("islandbutton clicked");
+		
 	}
 	
 }
