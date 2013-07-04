@@ -29,7 +29,9 @@ public class Treasure : MonoBehaviour {
 	// Update is called once per frame
 	void Update () {
 			if (isJunk && (transform.position.y < water.transform.position.y)) {
-			this.gameObject.SetActive(false);
+			//this.gameObject.rigidbody.isKinematic = true;
+			//this.gameObject.transform.Translate(0,5,0);
+			//this.gameObject.SetActive(false);
 			print ("splash");
 			showExplosion();
 		}

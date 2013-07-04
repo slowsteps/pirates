@@ -14,13 +14,15 @@ public class Main : MonoBehaviour {
 	GameObject closestIsland;
 	GameObject diggingspot;
 	bool newdig = true;
+	GameObject teleportbutton;
 	
 	GameObject rudder;
-	GameObject cross;
 	
+	GameObject rainbow;
 	GameObject treasure;
 	GameObject chest;
 	GameObject boot;
+	GameObject crab;
 	GameObject parrot;
 	ArrayList treasures;
 	public GameObject curtreasure;
@@ -136,8 +138,8 @@ public class Main : MonoBehaviour {
 		defaultviewpoint = GameObject.Find("defaultviewpoint");
 		behindviewpoint = GameObject.Find ("behindviewpoint");
 		cannonlookat = GameObject.Find("cannonlookat");
-		cross = GameObject.Find("crossdummy");
 		
+		rainbow = GameObject.Find("rainbow prefab");
 		nozzle = GameObject.Find("nozzle");
 		sails = GameObject.Find("sails");
 		saildummy = GameObject.Find("saildummy");
@@ -156,6 +158,7 @@ public class Main : MonoBehaviour {
 		backbutton.SetActive(false);
 		islandbutton = GameObject.Find("islandbutton");
 		islandbutton.SetActive(false);
+		teleportbutton = GameObject.Find("compassbutton");
 		
 		nozzle.particleSystem.Pause();
 		
@@ -167,6 +170,7 @@ public class Main : MonoBehaviour {
 		treasure = GameObject.Find("treasuredummy");
 		chest = GameObject.Find("treasurechest");
 		boot = GameObject.Find("boot");
+		crab = GameObject.Find("crab pf");
 		
 		holdcamera = GameObject.Find("HoldCamera").camera;
 		maincamera = GameObject.Find("Main Camera").camera;
@@ -389,7 +393,7 @@ public class Main : MonoBehaviour {
 	//POINT AND CLICK STEERING
 	void onGodHand() {
 		
-		if (gameMode.Equals(CAM_ORTHO)) return;		
+		if (cameraMode.Equals(CAM_ORTHO)) return;		
 		//continous raycasting
 		Ray ray = Camera.main.ScreenPointToRay(Input.mousePosition);
 		RaycastHit hitInfo;
@@ -444,12 +448,14 @@ public class Main : MonoBehaviour {
 	
 	void onMousePick(Vector3 cursorpos) {
 		
+		if (cameraMode.Equals(CAM_ORTHO)) return;
+		
 		Ray ray = Camera.main.ScreenPointToRay(cursorpos);
 		RaycastHit hitInfo;
 			if (Physics.Raycast(ray, out hitInfo)) {
 			
 			
-				message.text = hitInfo.collider.name + " " + hitInfo.collider.tag;
+				//message.text = hitInfo.collider.name + " " + hitInfo.collider.tag;
 				if (hitInfo.collider.name.Equals("anchor")) toggleAnchor();	
 				else if (hitInfo.collider.name.Equals("steerdummy")) toggleRudder();
 				else if (hitInfo.collider.name.Equals("crowsnest 1")) toggleCrowsnest();	
@@ -461,6 +467,7 @@ public class Main : MonoBehaviour {
 				//TODO tag
 				else if (hitInfo.collider.name.Equals("treasurechest")) toggleTreasure();
 				else if (hitInfo.collider.name.Equals("boot")) toggleTreasure();
+				else if (hitInfo.collider.name.Equals("crab pf")) toggleTreasure();
 				else if (hitInfo.collider.name.Equals("treasurechest-pf(Clone)")) toggleTreasure();
 				//end TODO
 				else if (hitInfo.collider.name.Equals("cannondummy")) toggleCannon();
@@ -552,6 +559,7 @@ public class Main : MonoBehaviour {
 	
 	public void enterIsland() {
 		//place pirate on island when closeby
+			print ("enter island");
 			gameMode = MODE_ISLAND;
 			cameraMode = CAM_ORBIT;
 			//curlookat = pirate;
@@ -597,9 +605,10 @@ public class Main : MonoBehaviour {
 	
 	void digForTreasure() {
 		
-		//print ("newdig: " + newdig.ToString() );
+		
 		
 		if (newdig) {
+			print ("newdig: " + newdig.ToString() );
 			steering = false;
 			diggingparticles.transform.position = diggingspot.transform.position;
 			diggingparticles.SetActive(true);
@@ -609,6 +618,7 @@ public class Main : MonoBehaviour {
 			islandhole.transform.localScale = new Vector3(1,1,1);
 			diggingpower = 30;
 			newdig = false;
+			spade.SetActive(true);
 		}
 		else {
 			diggingpower = 30;
@@ -618,8 +628,9 @@ public class Main : MonoBehaviour {
 	
 	void setupIslands() {
 		islands = new ArrayList();
-		islands.Add(island);
+		islands.Add(GameObject.Find("islanddummy"));
 		islands.Add(GameObject.Find("towerisland pf"));
+		islands.Add(GameObject.Find("towerisland pf 2"));
 	}
 	
 	void setupTreasures() {
@@ -628,6 +639,10 @@ public class Main : MonoBehaviour {
 		treasures.Add(boot);
 		boot.AddComponent("Treasure");
 		boot.GetComponent<Treasure>().isJunk = true;
+
+		treasures.Add(crab);
+		crab.AddComponent("Treasure");
+		crab.GetComponent<Treasure>().isJunk = true;
 		
 		treasures.Add(chest);
 		chest.AddComponent("Treasure");
@@ -660,9 +675,11 @@ public class Main : MonoBehaviour {
 		curtreasure.transform.parent = treasure.transform;
 		
 		treasure.transform.position = pirate.transform.position + 2*pirate.transform.forward;
-		print ("tween treasure");
-		iTween.MoveFrom(treasure,iTween.Hash("y",10,"easetype",iTween.EaseType.easeOutBounce,"time",2));
+		treasure.transform.LookAt(new Vector3(pirate.transform.position.x,treasure.transform.position.y,pirate.transform.position.z));
 		
+		print ("tween treasure " + treasure.name);
+		iTween.MoveFrom(treasure,iTween.Hash("y",10,"easetype",iTween.EaseType.easeOutBounce,"time",2));
+		message.text = "reveal treasure " + treasure.name;
 		curtreasure.collider.enabled = true;
 		
 		
@@ -679,25 +696,18 @@ public class Main : MonoBehaviour {
 		if (curtreasure.GetComponent<Treasure>().isFromIsland) {
 			print ("toggle treasure - is from island");
 			print ("islandflag: " + islandflag.name);
-			GameObject.Instantiate(islandflag ,pirate.transform.position - 2*pirate.transform.forward,Quaternion.identity);
-			//GameObject.Instantiate(islandflag);
-			print ("post instantiate");
-			//iTween.MoveFrom(anIslandflag,iTween.Hash("y",10,"time",0.4f,"delay",0));
+			GameObject anIslandflag = GameObject.Instantiate(islandflag ,pirate.transform.position - 2*pirate.transform.forward,Quaternion.identity) as GameObject;
+			iTween.MoveFrom(anIslandflag,iTween.Hash("y",10,"time",1f,"delay",0,"easetype",iTween.EaseType.easeOutBounce));
 		}
 		
 		
 		if (curtreasure.GetComponent<Treasure>().isJunk) {
 			print ("Junk treasure");
 			
-			//iTween.RotateTo(rightboot,iTween.Hash("x",-50));
+			iTween.RotateTo(rightboot,iTween.Hash("x",-50));
 			curtreasure.transform.Translate(0,1,0);
-			curtreasure.AddComponent("Rigidbody");
-			curtreasure.collider.isTrigger = false;
-			curtreasure.rigidbody.AddForce(300*pirate.transform.forward);
-			curtreasure.rigidbody.AddForce(0,400,0);
-			curtreasure.rigidbody.AddTorque(20,0,10);
+			iTween.MoveAdd(curtreasure,iTween.Hash("y",15));
 			
-			curlookat = curtreasure;
 			
 		}
 		else {
@@ -824,14 +834,15 @@ public class Main : MonoBehaviour {
 	
 	
 	public void teleport() {
-		shipdummy.rigidbody.isKinematic = true;
-		shipdummy.transform.position = island.transform.position;
-		shipdummy.transform.Translate(0,3.5f,-20);
-		map.SetActive(true);
-		map.transform.position = new Vector3(0.5f,0.5f,0);
-		iTween.MoveTo(map,iTween.Hash("x",-0.5f,"time",1,"delay",1,"easetype",iTween.EaseType.easeInCubic));
-		iTween.MoveFrom(shipdummy,iTween.Hash("y",30,"time",3,"delay",1,"easetype",iTween.EaseType.easeOutElastic,"oncomplete","onTeleportComplete","oncompletetarget",this.gameObject));
-		
+		if (closestIsland != null) {
+			shipdummy.rigidbody.isKinematic = true;
+			shipdummy.transform.position = closestIsland.transform.position;
+			shipdummy.transform.Translate(0,4f,-20);
+			map.SetActive(true);
+			map.transform.position = new Vector3(0.5f,0.5f,0);
+			iTween.MoveTo(map,iTween.Hash("x",-0.5f,"time",1,"delay",1,"easetype",iTween.EaseType.easeInCubic));
+			iTween.MoveFrom(shipdummy,iTween.Hash("y",30,"time",3,"delay",1,"easetype",iTween.EaseType.easeOutElastic,"oncomplete","onTeleportComplete","oncompletetarget",this.gameObject));
+		}
 	}
 	
 	void onTeleportComplete() {
@@ -859,16 +870,32 @@ public class Main : MonoBehaviour {
 	
 	void findIslandInRange() {
 		
+		savedIslandDist = 999;
+		closestIsland = null;
 		
 		foreach(GameObject anIsland in islands) {
-			print(anIsland.GetComponent<Island>().treasureFound);
-			float dist = Vector3.Distance(anIsland.transform.position,shipdummy.transform.position);
-			if (dist<savedIslandDist) {
-				closestIsland = anIsland;
-				savedIslandDist = dist;
-			}
+				if (!anIsland.GetComponent<Island>().treasureFound) {
+					float dist = Vector3.Distance(anIsland.transform.position,shipdummy.transform.position);
+					if (dist<savedIslandDist) {
+						closestIsland = anIsland;
+						savedIslandDist = dist;
+					}
+				}
+			
 			
 		}
+		if (closestIsland != null && gameMode.Equals(MODE_SHIP)) {
+			rainbow.SetActive(true);
+			rainbow.transform.position =  closestIsland.GetComponent<Island>().digginglocation.transform.position;
+			rainbow.transform.Translate(0,1,0);
+			rainbow.transform.LookAt(Camera.mainCamera.transform,Vector3.up);
+			teleportbutton.SetActive(true);
+		}
+		else {
+			rainbow.SetActive(false); 
+			teleportbutton.SetActive(false);
+		}
+		
 	}
 	
 }
