@@ -31,7 +31,7 @@ public class Treasure : MonoBehaviour {
 			if (isJunk && (transform.position.y < water.transform.position.y)) {
 			//this.gameObject.rigidbody.isKinematic = true;
 			//this.gameObject.transform.Translate(0,5,0);
-			//this.gameObject.SetActive(false);
+			this.gameObject.SetActive(false);
 			print ("splash");
 			showExplosion();
 		}

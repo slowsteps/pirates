@@ -16,6 +16,7 @@ public class BackButton : MonoBehaviour {
 	}
 	
 	void OnMouseDown() {
+		main.tappos = main.shipdummy.transform.position;
 		this.gameObject.SetActive(false);
 		main.toggleDefault("ship button");
 	}

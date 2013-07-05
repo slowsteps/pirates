@@ -1,10 +1,8 @@
 using UnityEngine;
 using System.Collections;
 
-public class Islandbutton : MonoBehaviour {
-	
-	public Main main;
-	
+public class Crab : MonoBehaviour {
+
 	// Use this for initialization
 	void Start () {
 	
@@ -14,12 +12,4 @@ public class Islandbutton : MonoBehaviour {
 	void Update () {
 	
 	}
-	
-	void OnMouseDown() {
-		this.gameObject.SetActive(false);
-		main.enterIsland();
-		
-		
-	}
-	
 }

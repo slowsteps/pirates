@@ -11,11 +11,14 @@ public class Main : MonoBehaviour {
 	public GameObject island;
 	public ArrayList islands;
 	float savedIslandDist = 9999;
-	GameObject closestIsland;
+	public GameObject closestIsland;  //closest unexplored
+	public GameObject curIsland; //currently standing on
 	GameObject diggingspot;
 	bool newdig = true;
 	GameObject teleportbutton;
-	
+	public Vector3 tappos;
+	Vector3 shipdir;
+		
 	GameObject rudder;
 	
 	GameObject rainbow;
@@ -150,8 +153,8 @@ public class Main : MonoBehaviour {
 		steerdummy = GameObject.Find("steerdummy");
 		tapdummy = GameObject.Find("tapdummy");
 		parrot = GameObject.Find("parrot pf");
-		parrot.AddComponent("BoxCollider");
-		parrot.collider.isTrigger = true;
+		//parrot.AddComponent("BoxCollider");
+		//parrot.collider.isTrigger = true;
 
 		water = GameObject.Find("water");
 		backbutton = GameObject.Find("backbutton");
@@ -234,11 +237,12 @@ public class Main : MonoBehaviour {
 		lastmousepos = new Vector3(0,0,1);
 		savedWaterTouchPos = new Vector3();
 		
-		lowerSails();
+		
 		toggleDefault("start");
 		setupIslands();
 		setupTreasures();
 		map.SetActive(false);
+		tappos = shipdummy.transform.position;
 		
 	}
 	
@@ -348,6 +352,9 @@ public class Main : MonoBehaviour {
 	
 	void checkMouseClicks() { 
 		
+		//always
+		//if (!steering) onGodHand2();
+		
 		//mouseclick
 		if (Input.GetMouseButtonUp(0) && totalswipelength<10)  {
 			onMousePick(Input.mousePosition);
@@ -380,17 +387,19 @@ public class Main : MonoBehaviour {
 			
 			//god hand control
 			onGodHand();
+			
 			//
 			
 		}
 		else {
-			tapdummy.particleSystem.emissionRate = 0;
+			//tapdummy.particleSystem.emissionRate = 0;
 		}
-			
+		
+		
 				
 	}
 	
-	//POINT AND CLICK STEERING
+	//POINT AND CLICK STEERING VERSION 1
 	void onGodHand() {
 		
 		if (cameraMode.Equals(CAM_ORTHO)) return;		
@@ -401,23 +410,23 @@ public class Main : MonoBehaviour {
 			
 			//WATER FINGER
 			if (hitInfo.collider.name.Equals("water")) {
-			    
-				 
 				
-				Vector3 tappos = hitInfo.point;
+				tappos = hitInfo.point;
 				
 				//Vector3 waterswipe =  hitInfo.point - savedWaterTouchPos;
 				Vector3 waterswipe =  tappos - savedWaterTouchPos;
-				if (waterswipe.magnitude>0.1f) waterswipe = 50f*Vector3.Normalize(waterswipe);
+				message.text = waterswipe.magnitude.ToString();
+				if (waterswipe.magnitude>1) waterswipe = 1*waterswipe.normalized;
 				
 				
 				tapdummy.particleSystem.emissionRate = 15;
 				tapdummy.transform.position = hitInfo.point;
 				
-				if (!steering && cameraMode.Equals(CAM_ISO)) {
-					//sail towards finger when not steering
+				if (!steering && cameraMode.Equals(CAM_FOLLOW)) {
+					
 					if (iswaterswipe) {
 						//Debug.DrawRay(hitInfo.point,10*waterswipe);
+						shipdummy.rigidbody.drag = 0.4f;
 						
 						float normalF = Vector3.Dot(shipdummy.transform.right,waterswipe);
 						float tangF = Vector3.Dot(shipdummy.transform.forward,waterswipe);
@@ -425,9 +434,14 @@ public class Main : MonoBehaviour {
 						Vector3 delta = hitInfo.point - shipdummy.transform.position;
 						if (Vector3.Dot(delta,shipdummy.transform.forward)<0) normalF = -normalF;  //swipe back of the boat
 						
+						float turntorque = Vector3.Dot(waterswipe,shipdummy.transform.right);
+						shipdummy.rigidbody.AddTorque(0,60*turntorque,0);
 						
-						shipdummy.rigidbody.AddTorque(0,normalF,0);
-						shipdummy.rigidbody.AddForce(0.4f*tangF*shipdummy.transform.forward);
+						//shipdummy.rigidbody.AddTorque(0,normalF,0);
+						//shipdummy.rigidbody.AddForce(0.4f*tangF*shipdummy.transform.forward);
+						
+						shipdummy.rigidbody.AddForce(45*waterswipe);
+						
 					}
 						
 					iswaterswipe = true;
@@ -444,6 +458,52 @@ public class Main : MonoBehaviour {
 		
 		
 	}
+	
+	//POINT AND CLICK STEERING VERSION 2
+	
+	bool going = false;
+	
+	void onGodHand2() {
+			
+		if ( Input.GetMouseButtonDown(0) && cameraMode.Equals(CAM_FOLLOW) ) {		
+			Ray ray = Camera.main.ScreenPointToRay(Input.mousePosition);
+			RaycastHit hitInfo;
+			if (Physics.Raycast(ray, out hitInfo)) {	
+			
+			//WATER FINGER
+				if (hitInfo.collider.name.Equals("water")) {
+					message.text = "new tappos: " + hitInfo.point.ToString() + " " + gameMode; 
+					tappos = hitInfo.point;
+					
+					shipdir = tappos - shipdummy.transform.position;
+					
+					
+					tapdummy.transform.position = hitInfo.point;
+					going = true;
+					
+				}
+				
+			}
+		}
+		
+		shipdir = tappos - shipdummy.transform.position;
+		if (shipdir.magnitude < 3.5) going = false;
+		tapdummy.particleSystem.emissionRate = 4*shipdir.magnitude;
+		if (shipdir.magnitude > 4) shipdir = 4*shipdir.normalized;
+		
+		//Debug.DrawRay(shipdummy.transform.position,shipdir);
+		//Debug.DrawRay(tappos,10*Vector3.up,Color.red);
+		
+		if (going) {
+			shipdummy.rigidbody.AddForce(3*shipdir);
+			float turntorque = Vector3.Dot(shipdir,shipdummy.transform.right);
+			shipdummy.rigidbody.AddTorque(0,5*turntorque,0);
+		}
+			
+		
+	}
+
+	
 	
 	
 	void onMousePick(Vector3 cursorpos) {
@@ -541,16 +601,19 @@ public class Main : MonoBehaviour {
 
 	
 	public void toggleDefault(string reason) {
+		tappos = shipdummy.transform.position;
+		shipdir = Vector3.zero;
 		print ("toggle default, reason: " + reason);
 		cargohold.SetActive(false);
 		holdcamera.camera.enabled = false;
 		maincamera.camera.enabled = true;
-		cameraMode = CAM_ISO;
+		//cameraMode = CAM_ISO;
+		cameraMode = CAM_FOLLOW;
 		campos = defaultviewpoint;
 		curlookat = shipdummy;
 		steering = false;
 		Camera.mainCamera.fieldOfView = 70;
-		
+		lowerSails();
 		piratesToShip();
 		
 		gameMode = MODE_SHIP;
@@ -560,7 +623,9 @@ public class Main : MonoBehaviour {
 	public void enterIsland() {
 		//place pirate on island when closeby
 			print ("enter island");
+			curIsland = closestIsland;
 			gameMode = MODE_ISLAND;
+		 	message.text = gameMode;
 			cameraMode = CAM_ORBIT;
 			//curlookat = pirate;
 			diggingspot = closestIsland.GetComponent<Island>().digginglocation;
@@ -572,6 +637,9 @@ public class Main : MonoBehaviour {
 			pirate.transform.parent = null;
 			
 			pirate.transform.position = diggingspot.transform.position;
+			//pirate.transform.LookAt(new Vector3(maincamera.transform.position.x,pirate.transform.position.y,maincamera.transform.position.z),Vector3.up);
+			iTween.MoveFrom(pirate,iTween.Hash("y",diggingspot.transform.position.y+5,"easetype",iTween.EaseType.easeOutBounce,"time",2));
+		
 			//pirate.transform.position = islandviewpoint.transform.position;
 			backbutton.SetActive(true);
 	}
@@ -581,6 +649,9 @@ public class Main : MonoBehaviour {
 	}
 	
 	void updateDigging() {
+		
+		if (gameMode.Equals(MODE_ISLAND) && curIsland.GetComponent<Island>().treasureFound) return;
+		
 		if (gameMode.Equals(MODE_ISLAND)) {
 			//message.text = "diggingtime: " + diggingtime.ToString();
 			diggingparticles.particleSystem.emissionRate = diggingpower;
@@ -594,6 +665,8 @@ public class Main : MonoBehaviour {
 				if (diggingtime == 200) {
 					revealTreasure();
 					spade.SetActive(false);
+					diggingpower = 0;
+					diggingparticles.particleSystem.emissionRate = diggingpower;
 				}
 			}
 			else {
@@ -607,7 +680,7 @@ public class Main : MonoBehaviour {
 		
 		
 		
-		if (newdig) {
+		if (gameMode.Equals(MODE_ISLAND) && newdig) {
 			print ("newdig: " + newdig.ToString() );
 			steering = false;
 			diggingparticles.transform.position = diggingspot.transform.position;
@@ -678,7 +751,7 @@ public class Main : MonoBehaviour {
 		treasure.transform.LookAt(new Vector3(pirate.transform.position.x,treasure.transform.position.y,pirate.transform.position.z));
 		
 		print ("tween treasure " + treasure.name);
-		iTween.MoveFrom(treasure,iTween.Hash("y",10,"easetype",iTween.EaseType.easeOutBounce,"time",2));
+		iTween.MoveFrom(treasure,iTween.Hash("y",20,"easetype",iTween.EaseType.easeOutBounce,"time",2));
 		message.text = "reveal treasure " + treasure.name;
 		curtreasure.collider.enabled = true;
 		
@@ -697,7 +770,7 @@ public class Main : MonoBehaviour {
 			print ("toggle treasure - is from island");
 			print ("islandflag: " + islandflag.name);
 			GameObject anIslandflag = GameObject.Instantiate(islandflag ,pirate.transform.position - 2*pirate.transform.forward,Quaternion.identity) as GameObject;
-			iTween.MoveFrom(anIslandflag,iTween.Hash("y",10,"time",1f,"delay",0,"easetype",iTween.EaseType.easeOutBounce));
+			iTween.MoveFrom(anIslandflag,iTween.Hash("y",15,"time",2f,"delay",0,"easetype",iTween.EaseType.easeOutBounce));
 		}
 		
 		
@@ -706,7 +779,7 @@ public class Main : MonoBehaviour {
 			
 			iTween.RotateTo(rightboot,iTween.Hash("x",-50));
 			curtreasure.transform.Translate(0,1,0);
-			iTween.MoveAdd(curtreasure,iTween.Hash("y",15));
+			iTween.MoveTo(curtreasure,iTween.Hash("y",15,"time",2f,"easetype",iTween.EaseType.easeInOutBounce));
 			
 			
 		}
@@ -724,6 +797,8 @@ public class Main : MonoBehaviour {
 			
 			toggleDefault("treasure clicked");
 		}
+		
+		monster.SetActive(true);
 	}
 	
 	void toggleSail() {
@@ -761,6 +836,7 @@ public class Main : MonoBehaviour {
 	}
 	
 	void onHookComplete() {
+		gameMode = MODE_HOLD;
 		showHold();
 		addTreasureToHold();
 		hook.transform.Translate(0,4.5f,0);
@@ -795,7 +871,7 @@ public class Main : MonoBehaviour {
 		
 		treasuresfound++;
 		treasureToBeStored = false;
-		monster.SetActive(true);		
+				
 	}
 	
 	void toggleCannon() {
@@ -898,4 +974,5 @@ public class Main : MonoBehaviour {
 		
 	}
 	
+
 }

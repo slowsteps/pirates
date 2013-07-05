@@ -48,6 +48,7 @@
      <Compile Include="Assets\Battlebutton.cs" />
      <Compile Include="Assets\Cannonball.cs" />
      <Compile Include="Assets\CompassButton.cs" />
+     <Compile Include="Assets\Crab.cs" />
      <Compile Include="Assets\Island.cs" />
      <Compile Include="Assets\Islandbutton.cs" />
      <Compile Include="Assets\Main.cs" />
